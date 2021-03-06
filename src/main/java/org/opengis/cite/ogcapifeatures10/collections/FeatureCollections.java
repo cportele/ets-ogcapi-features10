@@ -15,6 +15,7 @@ import static org.testng.Assert.assertNotNull;
 import java.net.URI;
 import java.util.*;
 
+import org.apache.commons.lang3.StringUtils;
 import org.opengis.cite.ogcapifeatures10.CommonDataFixture;
 import org.opengis.cite.ogcapifeatures10.SuiteAttribute;
 import org.opengis.cite.ogcapifeatures10.openapi3.TestPoint;
@@ -98,15 +99,12 @@ public class FeatureCollections extends CommonDataFixture {
      *
      * Test Method
      *  1. Validate that all response documents comply with /ats/core/fc-md-links
-     *  2. Validate that all response documents comply with /ats/core/fc-md-items
-     *  3. In case the response includes a "crs" property, validate that the first value is either "http://www.opengis.net/def/crs/OGC/1.3/CRS84" or "http://www.opengis.net/def/crs/OGC/0/CRS84h"
-     *  4. Validate the collections content for all supported media types using the resources and tests identified in Schema and Tests for Collections content
      * </pre>
      * 
      * @param testPoint
      *            the test point to test, never <code>null</code>
      */
-    @Test(description = "A.2.5. Feature Collections {root}/collections, Abstract Test 10, Test Method 1 (Requirement /req/core/fc-md-success)", groups = "collections", dataProvider = "collectionsUris", dependsOnMethods = "validateFeatureCollectionsMetadataOperation", alwaysRun = true)
+    @Test(description = "A.2.5. Feature Collections {root}/collections, Abstract Test 10, Test Method 1 (Requirement /req/core/fc-md-success, /req/core/crs84)", groups = "collections", dataProvider = "collectionsUris", dependsOnMethods = "validateFeatureCollectionsMetadataOperation", alwaysRun = true)
     public void validateFeatureCollectionsMetadataOperationResponse_Links( TestPoint testPoint ) {
         Response response = testPointAndResponses.get( testPoint );
         if ( response == null )
@@ -157,7 +155,7 @@ public class FeatureCollections extends CommonDataFixture {
      * @param testPoint
      *            the test point to test, never <code>null</code>
      */
-    @Test(description = "A.2.5. Feature Collections {root}/collections, Abstract Test 10, Test Method 2 (Requirement /req/core/fc-md-success)", groups = "collections", dataProvider = "collectionsUris", dependsOnMethods = "validateFeatureCollectionsMetadataOperation", alwaysRun = true)
+    @Test(description = "A.2.5. Feature Collections {root}/collections, Abstract Test 10, Test Method 2 (Requirement /req/core/fc-md-success, /req/core/crs84)", groups = "collections", dataProvider = "collectionsUris", dependsOnMethods = "validateFeatureCollectionsMetadataOperation", alwaysRun = true)
     public void validateFeatureCollectionsMetadataOperationResponse_Items( TestPoint testPoint ) {
         Response response = testPointAndResponses.get( testPoint );
         if ( response == null )
@@ -185,7 +183,7 @@ public class FeatureCollections extends CommonDataFixture {
      * @param testPoint
      *            the test point to test, never <code>null</code>
      */
-    @Test(description = "A.2.5. Feature Collections {root}/collections, Abstract Test 10, Test Method 3 (Requirement /req/core/fc-md-success)", groups = "collections", dataProvider = "collectionsUris", dependsOnMethods = "validateFeatureCollectionsMetadataOperation", alwaysRun = true)
+    @Test(description = "A.2.5. Feature Collections {root}/collections, Abstract Test 10, Test Method 3 (Requirement /req/core/fc-md-success, /req/core/crs84)", groups = "collections", dataProvider = "collectionsUris", dependsOnMethods = "validateFeatureCollectionsMetadataOperation", alwaysRun = true)
     public void validateFeatureCollectionsMetadataOperationResponse_CrsProperty( TestPoint testPoint ) {
         Response response = testPointAndResponses.get( testPoint );
         if ( response == null )
@@ -209,7 +207,7 @@ public class FeatureCollections extends CommonDataFixture {
      * @param testPoint
      *            the test point to test, never <code>null</code>
      */
-    @Test(description = "A.2.5. Feature Collections {root}/collections, Abstract Test 10, Test Method 4 (Requirement /req/core/fc-md-success)", groups = "collections", dataProvider = "collectionsUris", dependsOnMethods = "validateFeatureCollectionsMetadataOperation", alwaysRun = true)
+    @Test(description = "A.2.5. Feature Collections {root}/collections, Abstract Test 10, Test Method 4 (Requirement /req/core/fc-md-success, /req/core/crs84)", groups = "collections", dataProvider = "collectionsUris", dependsOnMethods = "validateFeatureCollectionsMetadataOperation", alwaysRun = true)
     public void validateFeatureCollectionsMetadataOperationResponse_Content( TestPoint testPoint ) {
         Response response = testPointAndResponses.get( testPoint );
         if ( response == null )
@@ -227,10 +225,24 @@ public class FeatureCollections extends CommonDataFixture {
 
     private List<Map<String, Object>> createCollectionsMap( List<Object> collections ) {
         List<Map<String, Object>> collectionsMap = new ArrayList<>();
-        for ( Object collection : collections ) {
-            collectionsMap.add( (Map<String, Object>) collection );
-            if ( noOfCollections > 0 && collectionsMap.size() >= noOfCollections )
-                return collectionsMap;
+        for (Object collectionObj : collections) {
+            Map<String, Object> collection = (Map<String, Object>) collectionObj;
+            if (null != collection.get("id")) {
+                String itemType = (String) collection.get("itemType");
+                if (StringUtils.isEmpty(itemType) || itemType.equalsIgnoreCase("feature")) {
+                    List<Object> links = (List<Object>) collection.get("links");
+                    for (Object linkObj : links) {
+                        Map<String, Object> link = (Map<String, Object>) linkObj;
+                        if (link.get("rel").equals("items")) {
+                            collectionsMap.add(collection);
+                            break;
+                        }
+                    }
+                }
+                if (noOfCollections > 0 && collectionsMap.size() >= noOfCollections) {
+                    return collectionsMap;
+                }
+            }
         }
         return collectionsMap;
     }
