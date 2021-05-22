@@ -81,10 +81,13 @@ public class Feature extends CommonDataFixture {
             throw new SkipException( "Could not find url for collection with name " + collectionId
                                      + " supporting GeoJson (type " + GEOJSON_MIME_TYPE + ")" );
         String getFeatureUrlWithFeatureId;
-        if ( getFeatureUrl.indexOf( "?" ) == -1 ) {
-            getFeatureUrlWithFeatureId = getFeatureUrl + "/" + featureId;
-        } else {
+        if ( getFeatureUrl.indexOf( "?" ) != -1 ) {
             getFeatureUrlWithFeatureId = getFeatureUrl.substring( 0, getFeatureUrl.indexOf( "?" ) ) + "/" + featureId;
+        } else if (getFeatureUrl.indexOf(".") != -1) {
+            getFeatureUrlWithFeatureId = getFeatureUrl.substring(0, getFeatureUrl.lastIndexOf(".")) + "/" + featureId
+                    + getFeatureUrl.substring(getFeatureUrl.lastIndexOf("."));
+        } else {
+            getFeatureUrlWithFeatureId = getFeatureUrl + "/" + featureId;
         }
 
         Response response = init().baseUri( getFeatureUrlWithFeatureId ).accept( GEOJSON_MIME_TYPE ).when().request( GET );
@@ -171,8 +174,22 @@ public class Feature extends CommonDataFixture {
             Map<String, Object> link = (Map<String, Object>) linkObject;
             Object rel = link.get( "rel" );
             Object type = link.get( "type" );
-            if ( "items".equals( rel ) && GEOJSON_MIME_TYPE.equals( type ) )
-                return (String) link.get( "href" );
+            if ("items".equals(rel) && GEOJSON_MIME_TYPE.equals(type)) {
+                String url = (String) link.get("href");
+                if (!url.startsWith("http")) {
+                    String path = url;
+                    if (null != rootUri.getScheme() && !rootUri.getScheme().isEmpty())
+                        url = rootUri.getScheme() + ":";
+                    if (null != rootUri.getAuthority() && !rootUri.getAuthority().isEmpty())
+                        url = url + "//" + rootUri.getAuthority();
+                    url = url + path;
+                    if (null != rootUri.getQuery() && !rootUri.getQuery().isEmpty())
+                        url = url + "?" + rootUri.getQuery();
+                    if (null != rootUri.getFragment() && !rootUri.getFragment().isEmpty())
+                        url = url + "#" + rootUri.getFragment();
+                }
+                return url;
+            }
         }
         return null;
     }
